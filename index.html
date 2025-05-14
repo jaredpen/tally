@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broadcast Tally Light System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: white;
+        }
+        
+        .camera-display {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            transition: background-color 0.5s ease;
+        }
+        
+        .camera-number {
+            font-size: 12rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .status-text {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-top: 2rem;
+        }
+        
+        .preview {
+            background-color: #48bb78;
+        }
+        
+        .program {
+            background-color: #f56565;
+        }
+        
+        .idle {
+            background-color: #2d3748;
+        }
+        
+        .button-active {
+            transform: scale(0.98);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+        }
+        
+        .session-badge {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 10;
+        }
+        
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            z-index: 10;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .connected {
+            background-color: #48bb78;
+        }
+        
+        .connecting {
+            background-color: #ecc94b;
+        }
+        
+        .disconnected {
+            background-color: #f56565;
+        }
+        
+        .qr-code {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Connection Status -->
+    <div id="connection-status" class="connection-status">
+        <div id="status-indicator" class="status-indicator disconnected"></div>
+        <span id="status-text">Disconnected</span>
+    </div>
+
+    <!-- Home Page -->
+    <div id="home-page" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full">
+            <h1 class="text-3xl font-bold text-center mb-8">Broadcast Tally Light System</h1>
+            
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-center mb-4 text-gray-300">Join or Create Session</h2>
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label for="session-id" class="block text-sm font-medium text-gray-300 mb-1">Session ID</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="session-id" placeholder="Enter session ID or leave blank for new session" 
+                                class="w-full px-4 py-2 border border-gray-600 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button onclick="copySessionId()" id="copy-btn" class="bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 rounded-md hidden">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="text-xl font-semibold text-center mb-6 text-gray-300">Select your role</h2>
+            
+            <div class="grid grid-cols-1 gap-4">
+                <button onclick="joinSession('td')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg text-lg transition-colors duration-200">
+                    Technical Director
+                </button>
+                
+                <div class="grid grid-cols-2 gap-4 mt-2">
+                    <button onclick="joinSession('cam1')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg text-lg transition-colors duration-200">
+                        Camera 1
+                    </button>
+                    <button onclick="joinSession('cam2')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg text-lg transition-colors duration-200">
+                        Camera 2
+                    </button>
+                    <button onclick="joinSession('cam3')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg text-lg transition-colors duration-200">
+                        Camera 3
+                    </button>
+                    <button onclick="joinSession('cam4')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg text-lg transition-colors duration-200">
+                        Camera 4
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center text-gray-400 text-sm">
+                <p>This system uses JSONBin.io to sync data between devices.</p>
+                <p>No installation required - works directly in your browser!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Director Page -->
+    <div id="td-page" class="min-h-screen flex flex-col items-center justify-center p-4 hidden">
+        <div id="session-badge-td" class="session-badge hidden">
+            Session: <span id="session-id-display-td"></span>
+        </div>
+        
+        <div id="qr-container-td" class="qr-code hidden">
+            <div id="qr-code-td"></div>
+            <div class="text-center text-black mt-2 text-xs font-medium">Scan to join</div>
+        </div>
+        
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-3xl w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold">Technical Director</h1>
+                <button onclick="leaveSession()" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm">
+                    Change Role
+                </button>
+            </div>
+            
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-300 mb-4">Preview</h2>
+                <div class="grid grid-cols-4 gap-4">
+                    <button id="preview-1" class="bg-gray-700 hover:bg-green-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setPreview(1)">
+                        CAM 1
+                    </button>
+                    <button id="preview-2" class="bg-gray-700 hover:bg-green-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setPreview(2)">
+                        CAM 2
+                    </button>
+                    <button id="preview-3" class="bg-gray-700 hover:bg-green-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setPreview(3)">
+                        CAM 3
+                    </button>
+                    <button id="preview-4" class="bg-gray-700 hover:bg-green-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setPreview(4)">
+                        CAM 4
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-300 mb-4">Program</h2>
+                <div class="grid grid-cols-4 gap-4">
+                    <button id="program-1" class="bg-gray-700 hover:bg-red-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setProgram(1)">
+                        CAM 1
+                    </button>
+                    <button id="program-2" class="bg-gray-700 hover:bg-red-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setProgram(2)">
+                        CAM 2
+                    </button>
+                    <button id="program-3" class="bg-gray-700 hover:bg-red-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setProgram(3)">
+                        CAM 3
+                    </button>
+                    <button id="program-4" class="bg-gray-700 hover:bg-red-700 text-white font-bold py-6 rounded-lg text-xl" onclick="setProgram(4)">
+                        CAM 4
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-6">
+                <button id="cut-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-6 rounded-lg text-2xl" onclick="cutTransition()">
+                    CUT
+                </button>
+                <button id="auto-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-lg text-2xl" onclick="autoTransition()">
+                    AUTO
+                </button>
+            </div>
+            
+            <div class="mt-8 bg-gray-700 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold text-gray-300 mb-3">Keyboard Shortcuts</h3>
+                <div class="grid grid-cols-2 gap-4 text-sm text-gray-300">
+                    <div>
+                        <p>1-4: Select Preview Camera</p>
+                        <p>Q: CUT Transition</p>
+                    </div>
+                    <div>
+                        <p>5-8: Select Program Camera</p>
+                        <p>A: AUTO Transition</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Operator Pages -->
+    <div id="cam1-page" class="camera-display idle hidden">
+        <div id="session-badge-cam1" class="session-badge hidden">
+            Session: <span id="session-id-display-cam1"></span>
+        </div>
+        <button onclick="leaveSession()" class="absolute top-4 right-4 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm">
+            Change Role
+        </button>
+        <div class="camera-number">1</div>
+        <div id="cam1-status" class="status-text">STANDBY</div>
+    </div>
+    
+    <div id="cam2-page" class="camera-display idle hidden">
+        <div id="session-badge-cam2" class="session-badge hidden">
+            Session: <span id="session-id-display-cam2"></span>
+        </div>
+        <button onclick="leaveSession()" class="absolute top-4 right-4 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm">
+            Change Role
+        </button>
+        <div class="camera-number">2</div>
+        <div id="cam2-status" class="status-text">STANDBY</div>
+    </div>
+    
+    <div id="cam3-page" class="camera-display idle hidden">
+        <div id="session-badge-cam3" class="session-badge hidden">
+            Session: <span id="session-id-display-cam3"></span>
+        </div>
+        <button onclick="leaveSession()" class="absolute top-4 right-4 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm">
+            Change Role
+        </button>
+        <div class="camera-number">3</div>
+        <div id="cam3-status" class="status-text">STANDBY</div>
+    </div>
+    
+    <div id="cam4-page" class="camera-display idle hidden">
+        <div id="session-badge-cam4" class="session-badge hidden">
+            Session: <span id="session-id-display-cam4"></span>
+        </div>
+        <button onclick="leaveSession()" class="absolute top-4 right-4 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm">
+            Change Role
+        </button>
+        <div class="camera-number">4</div>
+        <div id="cam4-status" class="status-text">STANDBY</div>
+    </div>
+
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+
+    <script>
+        // API Configuration
+        const API_KEY = "$2b$10$Uf1lhJJTDxNXKFAXDpQW8.1fYu.H9XLzqmVaUKAJiGDGHRQxJJPJO"; // JSONBin.io API key
+        const API_URL = "https://api.jsonbin.io/v3/b";
+        
+        // State management
+        const state = {
+            preview: null,
+            program: null,
+            sessionId: null,
+            role: null,
+            isTD: false,
+            autoTransitionInProgress: false,
+            pollInterval: null,
+            binId: null,
+            lastUpdated: 0
+        };
+
+        // Generate a random session ID
+        function generateSessionId() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+        
+        // Copy session ID to clipboard
+        function copySessionId() {
+            const sessionIdInput = document.getElementById('session-id');
+            sessionIdInput.select();
+            document.execCommand('copy');
+            
+            const copyBtn = document.getElementById('copy-btn');
+            copyBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            `;
+            
+            setTimeout(() => {
+                copyBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                `;
+            }, 2000);
+        }
+
+        // Update connection status display
+        function updateConnectionStatus(status) {
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            statusIndicator.className = 'status-indicator ' + status;
+            
+            switch (status) {
+                case 'connected':
+                    statusText.textContent = 'Connected';
+                    break;
+                case 'disconnected':
+                    statusText.textContent = 'Disconnected';
+                    break;
+                case 'connecting':
+                    statusText.textContent = 'Connecting...';
+                    break;
+            }
+        }
+
+        // Create a new JSONBin
+        async function createBin(sessionId) {
+            updateConnectionStatus('connecting');
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': API_KEY,
+                        'X-Bin-Name': `tally-${sessionId}`
+                    },
+                    body: JSON.stringify({
+                        preview: null,
+                        program: null,
+                        lastUpdate: Date.now(),
+                        sessionId: sessionId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                state.binId = data.metadata.id;
+                updateConnectionStatus('connected');
+                return data.metadata.id;
+            } catch (error) {
+                console.error('Error creating bin:', error);
+                updateConnectionStatus('disconnected');
+                alert('Failed to create session. Please try again.');
+                return null;
+            }
+        }
+
+        // Find a bin by session ID
+        async function findBin(sessionId) {
+            updateConnectionStatus('connecting');
+            
+            try {
+                // We'll use a workaround since JSONBin doesn't have a search feature
+                // We'll try to access a bin with a predictable name pattern
+                const response = await fetch(`${API_URL}/latest/tally-${sessionId}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Verify this is the correct session
+                if (data.record.sessionId === sessionId) {
+                    state.binId = data.metadata.id;
+                    state.preview = data.record.preview;
+                    state.program = data.record.program;
+                    updateConnectionStatus('connected');
+                    return data.metadata.id;
+                } else {
+                    throw new Error('Session ID mismatch');
+                }
+            } catch (error) {
+                console.error('Error finding bin:', error);
+                updateConnectionStatus('disconnected');
+                return null;
+            }
+        }
+
+        // Update bin data
+        async function updateBin() {
+            if (!state.binId) return false;
+            
+            try {
+                const response = await fetch(`${API_URL}/${state.binId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        preview: state.preview,
+                        program: state.program,
+                        lastUpdate: Date.now(),
+                        sessionId: state.sessionId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                updateConnectionStatus('connected');
+                return true;
+            } catch (error) {
+                console.error('Error updating bin:', error);
+                updateConnectionStatus('disconnected');
+                return false;
+            }
+        }
+
+        // Poll for updates
+        async function pollForUpdates() {
+            if (!state.binId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/${state.binId}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Only update if the data is newer than what we have
+                if (data.record.lastUpdate > state.lastUpdated) {
+                    state.preview = data.record.preview;
+                    state.program = data.record.program;
+                    state.lastUpdated = data.record.lastUpdate;
+                    updateUI();
+                    updateConnectionStatus('connected');
+                }
+            } catch (error) {
+                console.error('Error polling for updates:', error);
+                updateConnectionStatus('disconnected');
+            }
+        }
+
+        // Join a session with selected role
+        async function joinSession(role) {
+            let sessionId = document.getElementById('session-id').value.trim();
+            
+            // If no session ID provided, generate one
+            if (!sessionId) {
+                sessionId = generateSessionId();
+                document.getElementById('session-id').value = sessionId;
+                document.getElementById('copy-btn').classList.remove('hidden');
+            }
+            
+            // Store session info
+            state.sessionId = sessionId;
+            state.role = role;
+            state.isTD = (role === 'td');
+            
+            // Show session ID on appropriate page
+            document.getElementById(`session-id-display-${role}`).textContent = sessionId;
+            document.getElementById(`session-badge-${role}`).classList.remove('hidden');
+            
+            // Connect to JSONBin
+            let binId;
+            
+            if (role === 'td') {
+                // TD creates a new bin
+                binId = await createBin(sessionId);
+                if (!binId) {
+                    alert('Failed to create session. Please try again.');
+                    return;
+                }
+                
+                // Generate QR code for easy joining
+                generateQRCode(sessionId);
+            } else {
+                // Camera operators find existing bin
+                binId = await findBin(sessionId);
+                if (!binId) {
+                    alert('Session not found. Please check the session ID or create a new session as Technical Director.');
+                    return;
+                }
+            }
+            
+            // Navigate to appropriate page
+            selectRole(role);
+            
+            // Set up polling for updates
+            setupPolling();
+            
+            // Set up keyboard shortcuts for TD
+            if (role === 'td') {
+                setupKeyboardShortcuts();
+            }
+            
+            // Update UI
+            updateUI();
+        }
+        
+        // Generate QR code for session
+        function generateQRCode(sessionId) {
+            const currentUrl = window.location.href.split('?')[0]; // Remove any existing query params
+            const joinUrl = `${currentUrl}?session=${sessionId}`;
+            
+            const qrContainer = document.getElementById('qr-container-td');
+            const qrElement = document.getElementById('qr-code-td');
+            
+            QRCode.toCanvas(qrElement, joinUrl, { width: 128 }, function (error) {
+                if (error) console.error(error);
+                qrContainer.classList.remove('hidden');
+            });
+        }
+        
+        // Set up polling for updates
+        function setupPolling() {
+            // Clear any existing interval
+            if (state.pollInterval) {
+                clearInterval(state.pollInterval);
+            }
+            
+            // Set up new polling interval
+            state.pollInterval = setInterval(() => {
+                pollForUpdates();
+            }, 1000);
+        }
+        
+        // Leave current session
+        function leaveSession() {
+            // Clear polling interval
+            if (state.pollInterval) {
+                clearInterval(state.pollInterval);
+                state.pollInterval = null;
+            }
+            
+            // Reset state
+            state.role = null;
+            state.isTD = false;
+            state.preview = null;
+            state.program = null;
+            state.binId = null;
+            
+            // Go back to home page
+            goHome();
+        }
+
+        // Page navigation
+        function selectRole(role) {
+            document.querySelectorAll('div[id$="-page"]').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            document.getElementById(`${role}-page`).classList.remove('hidden');
+        }
+
+        function goHome() {
+            document.querySelectorAll('div[id$="-page"]').forEach(page => {
+                page.classList.add('hidden');
+            });
+            document.getElementById('home-page').classList.remove('hidden');
+        }
+
+        // Update UI based on current state
+        function updateUI() {
+            if (state.isTD) {
+                updateTDUI();
+            } else {
+                updateCameraTallyLights();
+            }
+        }
+        
+        // Update TD UI
+        function updateTDUI() {
+            // Reset all buttons
+            for (let i = 1; i <= 4; i++) {
+                // Reset preview buttons
+                document.getElementById(`preview-${i}`).classList.remove('bg-green-600');
+                document.getElementById(`preview-${i}`).classList.add('bg-gray-700');
+                
+                // Reset program buttons
+                document.getElementById(`program-${i}`).classList.remove('bg-red-600');
+                document.getElementById(`program-${i}`).classList.add('bg-gray-700');
+            }
+            
+            // Set active preview
+            if (state.preview) {
+                document.getElementById(`preview-${state.preview}`).classList.remove('bg-gray-700');
+                document.getElementById(`preview-${state.preview}`).classList.add('bg-green-600');
+            }
+            
+            // Set active program
+            if (state.program) {
+                document.getElementById(`program-${state.program}`).classList.remove('bg-gray-700');
+                document.getElementById(`program-${state.program}`).classList.add('bg-red-600');
+            }
+        }
+
+        // Technical Director functions
+        async function setPreview(camNumber) {
+            if (!state.isTD) return;
+            
+            // Visual feedback
+            const button = document.getElementById(`preview-${camNumber}`);
+            button.classList.add('button-active');
+            setTimeout(() => button.classList.remove('button-active'), 200);
+            
+            state.preview = camNumber;
+            await updateBin();
+            updateUI();
+        }
+
+        async function setProgram(camNumber) {
+            if (!state.isTD) return;
+            
+            // Visual feedback
+            const button = document.getElementById(`program-${camNumber}`);
+            button.classList.add('button-active');
+            setTimeout(() => button.classList.remove('button-active'), 200);
+            
+            state.program = camNumber;
+            await updateBin();
+            updateUI();
+        }
+
+        async function cutTransition() {
+            if (!state.isTD || !state.preview) return;
+            
+            // Flash the CUT button
+            const cutButton = document.getElementById('cut-button');
+            cutButton.classList.add('bg-red-800');
+            setTimeout(() => {
+                cutButton.classList.remove('bg-red-800');
+            }, 200);
+            
+            state.program = state.preview;
+            await updateBin();
+            updateUI();
+        }
+
+        async function autoTransition() {
+            if (!state.isTD || !state.preview || state.autoTransitionInProgress) return;
+            
+            state.autoTransitionInProgress = true;
+            
+            // Flash the AUTO button
+            const autoButton = document.getElementById('auto-button');
+            autoButton.classList.add('bg-blue-800');
+            
+            // Simulate a transition effect
+            setTimeout(async () => {
+                state.program = state.preview;
+                await updateBin();
+                updateUI();
+                
+                autoButton.classList.remove('bg-blue-800');
+                state.autoTransitionInProgress = false;
+            }, 1000);
+        }
+
+        // Camera tally light updates
+        function updateCameraTallyLights() {
+            // Get camera number from role
+            const camNumber = parseInt(state.role.replace('cam', ''));
+            
+            // Get camera page and status elements
+            const camPage = document.getElementById(`${state.role}-page`);
+            const camStatus = document.getElementById(`${state.role}-status`);
+            
+            if (camPage && camStatus) {
+                camPage.classList.remove('preview', 'program', 'idle');
+                
+                if (camNumber === state.program) {
+                    camPage.classList.add('program');
+                    camStatus.textContent = "ON AIR";
+                } else if (camNumber === state.preview) {
+                    camPage.classList.add('preview');
+                    camStatus.textContent = "READY";
+                } else {
+                    camPage.classList.add('idle');
+                    camStatus.textContent = "STANDBY";
+                }
+            }
+        }
+
+        // Keyboard shortcuts for TD
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(event) {
+                if (!state.isTD) return;
+                
+                const key = event.key.toLowerCase();
+                
+                // Preview selection (1-4)
+                if (key >= '1' && key <= '4') {
+                    const camNumber = parseInt(key);
+                    setPreview(camNumber);
+                }
+                
+                // Program selection (5-8 for cameras 1-4)
+                if (key >= '5' && key <= '8') {
+                    const camNumber = parseInt(key) - 4; // Convert 5-8 to 1-4
+                    setProgram(camNumber);
+                }
+                
+                // CUT transition
+                if (key === 'q') {
+                    cutTransition();
+                }
+                
+                // AUTO transition
+                if (key === 'a') {
+                    autoTransition();
+                }
+            });
+        }
+        
+        // Check for session ID in URL parameters
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionParam = urlParams.get('session');
+            
+            if (sessionParam) {
+                document.getElementById('session-id').value = sessionParam;
+            }
+        });
+    </script>
+</body>
+</html>
